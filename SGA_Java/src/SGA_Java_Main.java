@@ -114,12 +114,13 @@ public class SGA_Java_Main {
 	   //convert to current range of the problem
 		double convDec=convRange(value);
 		//return the value of the input function for the individual's converted binary number
+		//default function is 0.1abs(x)-sin(x)
 		double ans = (double) ( (0.1*Math.abs(convDec) ) - Math.sin(convDec) );
 		
 	return ans;
 	}
 	
-	//convert the decimal value to desired floating point range
+	//convert the decimal value to desired floating point range (depends on formula used)
 	private static double convRange(int raw){
    	double outval = ((((double)raw)/65535.0)*120.0)-60.0;
    return outval;
@@ -132,7 +133,7 @@ public class SGA_Java_Main {
 		else return 1;
 	}
 	
-	//3-2 tournament selection, creates an index array of selected individuals (selected[])
+	//3-2 tournament selection, creates an index array of selected individuals (selected[]) used later in processing
 	private static void selection(Individual[] population){
 		for (int i=0; i<POPULATION_SIZE; i+=2){
     		int r = (int) (rand.nextDouble()*POPULATION_SIZE);
@@ -140,17 +141,17 @@ public class SGA_Java_Main {
     		int t = (int) (rand.nextDouble()*POPULATION_SIZE);
 			
 			if ( ((MAXMIN*population[r].getFitness()) >= (MAXMIN*population[s].getFitness())) || ((MAXMIN*population[r].getFitness()) >= (MAXMIN*population[t].getFitness()))){
-      		if ((MAXMIN*population[s].getFitness()) > (MAXMIN*population[t].getFitness())){ 
+				if ((MAXMIN*population[s].getFitness()) > (MAXMIN*population[t].getFitness())){ 
 					selected[i] = r; 
 					selected[i+1] = s; 
 				}
-      		else{ 
+				else{ 
 					selected[i] = r; 
 					selected[i+1] = t; 
 				}
-   	 	}
+   	 		}
     		else{
-      		if ( ((MAXMIN*population[s].getFitness()) >= (MAXMIN*population[r].getFitness())) || ((MAXMIN*population[s].getFitness()) >= (MAXMIN*population[t].getFitness()))){
+    			if ( ((MAXMIN*population[s].getFitness()) >= (MAXMIN*population[r].getFitness())) || ((MAXMIN*population[s].getFitness()) >= (MAXMIN*population[t].getFitness()))){
         			if ((MAXMIN*population[r].getFitness()) > (MAXMIN*population[t].getFitness())){ 
 						selected[i] = s; 
 						selected[i+1] = r; 
@@ -159,22 +160,23 @@ public class SGA_Java_Main {
 						selected[i] = s; 
 						selected[i+1] = t; 
 					}
-      		}
+    			}
       		else{
       			if ( ((MAXMIN*population[t].getFitness()) >= (MAXMIN*population[r].getFitness())) || ((MAXMIN*population[t].getFitness()) >= (MAXMIN*population[s].getFitness()))){
         				if ((MAXMIN*population[r].getFitness()) > (MAXMIN*population[s].getFitness())){
 							selected[i] = t; 
 							selected[i+1] = r; 
 						}
-          			else{
+        				else{
 							selected[i] = t; 
 							selected[i+1] = s;
 						}
-					} 
 				} 
+			} 
 			} 
 		}
 	}
+	
 	//mutation mechanism
 	private static void mutation(Individual[] population){
 	   //for each individual in the population
@@ -228,7 +230,7 @@ public class SGA_Java_Main {
 	private static void elite(Individual[] population){
 		if ((MAXMIN*beststring.getFitness()) > (MAXMIN*evaluate(population[0]))){
     		population[0].setFitness(beststring.getFitness());
-   		population[0].setValue(beststring.getValue());
+    		population[0].setValue(beststring.getValue());
     		population[0].overwriteChrom(beststring.getChromosome());
   		}
 	}
