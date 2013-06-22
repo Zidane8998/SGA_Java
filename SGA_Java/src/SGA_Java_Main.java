@@ -1,19 +1,26 @@
 import java.util.Random;
 import java.lang.Math;
+import java.util.ArrayList;
 
 public class SGA_Java_Main {
-
+	
+    /* -------------- CONTROL PARAMETERS ------------------------------------*/
 	private static int POPULATION_SIZE=30;    // population size - number of strings
 	private static int CHROM_LENGTH=16;       // binary string length of each individual
 	private static double PMUT=0.05;          // probability of flipping each bit
 	private static int MAX_GEN=30;            // GA stops after this many generations
-	private static int GEN_REP=10;             // report is generated at these intervals
+	private static int GEN_REP=10;            // report is generated at these intervals
 	private static int ELITE=1;               // 1=elitism,  0=no elitism
 	private static int MAXMIN=-1;             // -1=minimize, 1=maximize
+	private static int SHUFFLE=10;            // number of times to "shuffle" the population before each selection (0 for no shuffle)
+	private static int REPLACE=0;             // 1=selection with replacement, 0=selection without replacement
+	/* ---------------------------------------------------------------------*/
+	
 	public static Random rand;
 	static Individual beststring = new Individual(CHROM_LENGTH);
 	static Individual verybest = new Individual(CHROM_LENGTH);
 	static int[] selected = new int[POPULATION_SIZE];
+	
 	public static void main (String args[]){
 		int curGen=0;
 		rand=new Random();
@@ -26,32 +33,41 @@ public class SGA_Java_Main {
 			i.setValue(decode(i));
 			i.setFitness(evaluate(i));
 		}
-		//
-		//run statistics (print out)
 		
 		//main loop
 		while (curGen < MAX_GEN){
-		   //get previous best
+			
+		    //get best individuals from last population
 			getPreviousBest(population);
-			//3-2 torunament selection
-			selection(population);
-			//1-pt crossover
+			
+			//shuffle population order before selection
+			shuffle(population);
+			
+			//3-2 tournament selection - pick 3 individuals at random from pool, compare their values and select 2 best
+			if (REPLACE==1)selection(population);
+			else if (REPLACE==0)selectionNoReplace(population);
+			
+			//1-pt crossover - using the 2 selected parents, create 2 new children via crossover and replace the parents
 			for (int i=0; i < POPULATION_SIZE; i=i+2){
-		   	crossover(selected[i], selected[i+1], population);
+				crossover(selected[i], selected[i+1], population);
 			}
-			//mutation
-		   mutation(population);
-			//evaluation
-	 	   for (Individual i : population){
+			
+			//mutation - randomly flip bits of selected individuals
+		    mutation(population);
+		   
+			//evaluation - evaluate the values of the bitstrings for each individual
+	 	    for (Individual i : population){
 				i.setValue(decode(i));
 				i.setFitness(evaluate(i));
 			}
-			//elitism
+	 	   
+			//elitism - copy the best string into the current population at the 0th position
 			if (ELITE==1)elite(population);
+			//run statistics and output at specified intervals
 			if (curGen%GEN_REP==0)statistics(population, selected, curGen);
 		curGen++;
 		}
-		//final report
+		//print final report
 		finalReport(population);
 	}
 	
@@ -60,7 +76,7 @@ public class SGA_Java_Main {
 		Individual indiv=new Individual(CHROM_LENGTH);
 		for (int i=0; i < CHROM_LENGTH; i++){
 		   if (rand.nextDouble()>=0.5)indiv.setChromosome(0, i);
-			else indiv.setChromosome(1, i);
+		   else indiv.setChromosome(1, i);
 		}
 	return indiv;
 	}
@@ -109,9 +125,9 @@ public class SGA_Java_Main {
 	
 	//evaluate the string according to the input function (problem-specific)
 	private static double evaluate(Individual indiv){
-	   //get value of Individual
-	   int value = indiv.getValue();
-	   //convert to current range of the problem
+		//get value of Individual
+	    int value = indiv.getValue();
+	    //convert to current range of the problem
 		double convDec=convRange(value);
 		//return the value of the input function for the individual's converted binary number
 		//default function is 0.1abs(x)-sin(x)
@@ -120,11 +136,11 @@ public class SGA_Java_Main {
 	return ans;
 	}
 	
-	//convert the decimal value to desired floating point range (depends on formula used)
+	//convert the decimal value to desired floating point range (depends on formula used, problem-specific)
 	private static double convRange(int raw){
-   	double outval = ((((double)raw)/65535.0)*120.0)-60.0;
-   return outval;
-   }
+		double outval = ((((double)raw)/65535.0)*120.0)-60.0;
+		return outval;
+    }
 	
 	//"flip a coin" to randomize chromosomes
 	private static int coinFlip(double prob){
@@ -133,13 +149,17 @@ public class SGA_Java_Main {
 		else return 1;
 	}
 	
-	//3-2 tournament selection, creates an index array of selected individuals (selected[]) used later in processing
+	//3-2 tournament selection, fills an index array of selected individuals (selected[]) used later in processing
 	private static void selection(Individual[] population){
+		
 		for (int i=0; i<POPULATION_SIZE; i+=2){
+			//create 3 random indices
     		int r = (int) (rand.nextDouble()*POPULATION_SIZE);
     		int s = (int) (rand.nextDouble()*POPULATION_SIZE);
     		int t = (int) (rand.nextDouble()*POPULATION_SIZE);
 			
+    		//select 3 individuals using the 3 random indices, compare their values and select the 2 best each time
+    		
 			if ( ((MAXMIN*population[r].getFitness()) >= (MAXMIN*population[s].getFitness())) || ((MAXMIN*population[r].getFitness()) >= (MAXMIN*population[t].getFitness()))){
 				if ((MAXMIN*population[s].getFitness()) > (MAXMIN*population[t].getFitness())){ 
 					selected[i] = r; 
@@ -174,6 +194,78 @@ public class SGA_Java_Main {
 				} 
 			} 
 			} 
+		}
+	}
+	
+	//3-2 tournament selection with no replacement
+	private static void selectionNoReplace(Individual[] population){
+		//create ArrayList to hold "pruned" (non-selected) indices from population[]
+		ArrayList<Integer> pruned = new ArrayList<Integer>();
+		
+		//iterate through population
+		for (int i=0; i<POPULATION_SIZE; i+=2){
+			
+			//create 3 random indices
+    		int r = (int) (rand.nextDouble()*POPULATION_SIZE);
+    		int s = (int) (rand.nextDouble()*POPULATION_SIZE);
+    		int t = (int) (rand.nextDouble()*POPULATION_SIZE);
+    		
+    		//if any indices match a pruned index, re-generate random numbers until it resolves to a non-pruned index
+    		for (int p: pruned){
+    			if (r==p){
+    				while (r==p)r=(int)(rand.nextDouble()*POPULATION_SIZE);
+    			}
+    			if (s==p){
+    				while (s==p)s=(int)(rand.nextDouble()*POPULATION_SIZE);
+    			}
+    			if (t==p){
+    				while (t==p)t=(int)(rand.nextDouble()*POPULATION_SIZE);
+    			}
+    		}
+    		
+    		//perform selection, marking the non-selected individual's index in pruned ArrayList
+    		if ( ((MAXMIN*population[r].getFitness()) >= (MAXMIN*population[s].getFitness())) || ((MAXMIN*population[r].getFitness()) >= (MAXMIN*population[t].getFitness()))){
+				if ((MAXMIN*population[s].getFitness()) > (MAXMIN*population[t].getFitness())){ 
+					selected[i] = r; 
+					selected[i+1] = s;
+					pruned.add(t);
+				}
+				else{ 
+					selected[i] = r; 
+					selected[i+1] = t;
+					pruned.add(s);
+				}
+   	 		}
+    		else{
+    			if ( ((MAXMIN*population[s].getFitness()) >= (MAXMIN*population[r].getFitness())) || ((MAXMIN*population[s].getFitness()) >= (MAXMIN*population[t].getFitness()))){
+        			if ((MAXMIN*population[r].getFitness()) > (MAXMIN*population[t].getFitness())){ 
+						selected[i] = s; 
+						selected[i+1] = r;
+						pruned.add(t);
+					}
+        			else{
+						selected[i] = s; 
+						selected[i+1] = t;
+						pruned.add(r);
+					}
+    			}
+      		else{
+      			if ( ((MAXMIN*population[t].getFitness()) >= (MAXMIN*population[r].getFitness())) || ((MAXMIN*population[t].getFitness()) >= (MAXMIN*population[s].getFitness()))){
+        				if ((MAXMIN*population[r].getFitness()) > (MAXMIN*population[s].getFitness())){
+							selected[i] = t; 
+							selected[i+1] = r;
+							pruned.add(s);
+						}
+        				else{
+							selected[i] = t; 
+							selected[i+1] = s;
+							pruned.add(r);
+						}
+				} 
+			} 
+			} 
+    		
+    		
 		}
 	}
 	
@@ -225,6 +317,20 @@ public class SGA_Java_Main {
 			parent2.setChromosome(curChild2Chrome, i);
 		}
 	}
+	private static void shuffle (Individual[] population){
+		for (int j=0; j < SHUFFLE; j++){
+			for (int i=0; i < POPULATION_SIZE; i++){
+				//generate random index
+				int r = rand.nextInt(POPULATION_SIZE);
+				//select individual that matches random index and swap positions with current i index in population
+				Individual cur=population[r];
+				Individual index=population[i];
+				population[i]=cur;
+				population[r]=index;
+			}
+		}
+	}
+	
 	
 	//elitism mechanism - copies best so far into population (overwriting 0th member of population[])
 	private static void elite(Individual[] population){
