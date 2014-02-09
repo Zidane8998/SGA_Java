@@ -1,3 +1,5 @@
+package sgajava;
+
 public class Individual{
 	private int value;
 	private double fitness;

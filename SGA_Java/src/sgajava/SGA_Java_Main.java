@@ -1,3 +1,4 @@
+package sgajava;
 import java.util.Random;
 import java.lang.Math;
 import java.util.ArrayList;
@@ -5,7 +6,7 @@ import java.util.ArrayList;
 public class SGA_Java_Main {
 	
     /* -------------- CONTROL PARAMETERS ------------------------------------*/
-	private static int POPULATION_SIZE=30;    // population size - number of strings
+	private static int POPULATION_SIZE=10;    // population size - number of strings
 	private static int CHROM_LENGTH=16;       // binary string length of each individual
 	private static double PMUT=0.05;          // probability of flipping each bit
 	private static int MAX_GEN=400;            // GA stops after this many generations
