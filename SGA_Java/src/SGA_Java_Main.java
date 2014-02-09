@@ -8,12 +8,12 @@ public class SGA_Java_Main {
 	private static int POPULATION_SIZE=30;    // population size - number of strings
 	private static int CHROM_LENGTH=16;       // binary string length of each individual
 	private static double PMUT=0.05;          // probability of flipping each bit
-	private static int MAX_GEN=30;            // GA stops after this many generations
+	private static int MAX_GEN=400;            // GA stops after this many generations
 	private static int GEN_REP=10;            // report is generated at these intervals
 	private static int ELITE=1;               // 1=elitism,  0=no elitism
 	private static int MAXMIN=-1;             // -1=minimize, 1=maximize
-	private static int SHUFFLE=10;            // number of times to "shuffle" the population before each selection (0 for no shuffle)
-	private static int REPLACE=0;             // 1=selection with replacement, 0=selection without replacement
+	private static int SHUFFLE=0;            // number of times to "shuffle" the population before each selection (0 for no shuffle)
+	private static int REPLACE=1;             // 1=selection with replacement, 0=selection without replacement
 	/* ---------------------------------------------------------------------*/
 	
 	public static Random rand;
@@ -41,7 +41,7 @@ public class SGA_Java_Main {
 			getPreviousBest(population);
 			
 			//shuffle population order before selection
-			shuffle(population);
+			if (SHUFFLE!=0)shuffle(population);
 			
 			//3-2 tournament selection - pick 3 individuals at random from pool, compare their values and select 2 best
 			if (REPLACE==1)selection(population);
@@ -149,6 +149,37 @@ public class SGA_Java_Main {
 		else return 1;
 	}
 	
+	//Bigger tournament selection (10-2)
+	   
+	   //generate 10 random indicies corresponding to 10 individuals, pick the 1st and 2nd highest fitness in the 10
+	   private static void bselection(Individual[] population){
+	      for (int i=0; i<POPULATION_SIZE; i+=2){
+	         //generate 10 random indices, store in index array
+	         int indices[] = new int[10];
+	         for (int j=0; j<10; j++){
+	            indices[j]=(int) (rand.nextDouble()*POPULATION_SIZE);
+	         }
+	         //get fitness of all 10 individuals, put in fitness array (corresponds to index array)
+	         double fitness[] = new double[10];
+	         for (int j=0; j<10; j++){
+	            fitness[j]=population[j].getFitness();
+	         }
+	         //int first=0; (9999 or -9999) depending on MAXMIN for both
+	         //int second=0;
+	         double first=MAXMIN*99999; int f=-1;
+	         double second=MAXMIN*99999; int s=-1;
+	         //for all fitnesses in fitness array
+	         for (int j=0; j<10; j++){
+	            //if (MAXMIN*fitness > first) first = fitness; continue;
+	            if (MAXMIN*fitness[j] > first){ first = fitness[j]; f=j; continue; }
+	            //else if (MAXMIN*fitness > second) second = fitness;
+	            else if (MAXMIN * fitness[j] > second){ second = fitness[j]; s=j; }
+	         }
+	            
+	         selected[i]=f;
+	         selected[i+1]=s;
+	      }
+	   }
 	//3-2 tournament selection, fills an index array of selected individuals (selected[]) used later in processing
 	private static void selection(Individual[] population){
 		
@@ -294,7 +325,7 @@ public class SGA_Java_Main {
 		Individual child1 = new Individual(CHROM_LENGTH);
 		Individual child2 = new Individual(CHROM_LENGTH);
 		//choose a location for 1-pt crossover
-		int site = (int)(rand.nextDouble()*CHROM_LENGTH);
+		int site = (int)(rand.nextInt(CHROM_LENGTH)-1);
 		//crossover the parents into two new children using the gene location
 		for (int i=0; i < CHROM_LENGTH; i++){
 		   int curParent1Chrome=parent1.getIndivChrome(i);
@@ -309,13 +340,8 @@ public class SGA_Java_Main {
 			}
 		}
 		//replace the parents with the children, over-writing the parent's chromosome with children
-		//this is faster than finding the parents in population[], deleting and adding to list
-		for (int i=0; i < CHROM_LENGTH; i++){
-			int curChild1Chrome=child1.getIndivChrome(i);
-			int curChild2Chrome=child2.getIndivChrome(i);
-			parent1.setChromosome(curChild1Chrome, i);
-			parent2.setChromosome(curChild2Chrome, i);
-		}
+		population[p1]=child1;
+		population[p2]=child2;
 	}
 	private static void shuffle (Individual[] population){
 		for (int j=0; j < SHUFFLE; j++){
